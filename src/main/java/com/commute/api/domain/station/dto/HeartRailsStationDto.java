@@ -35,7 +35,7 @@ public record HeartRailsStationDto(StationResponse response) {
             String name,
             String prefecture,
             String line,
-            double x,
-            double y
+            BigDecimal x,
+            BigDecimal y
     ) {}
 }

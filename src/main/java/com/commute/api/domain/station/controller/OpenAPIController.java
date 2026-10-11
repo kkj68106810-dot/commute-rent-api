@@ -1,9 +1,11 @@
 package com.commute.api.domain.station.controller;
 
-import com.commute.api.domain.station.entity.Line;
+import com.commute.api.common.utils.JapaneseConverter;
 import com.commute.api.domain.station.entity.Prefecture;
-import com.commute.api.domain.station.repository.LineRepository;
+import com.commute.api.domain.station.entity.RailLine;
+import com.commute.api.domain.station.entity.Station;
 import com.commute.api.domain.station.repository.PrefectureRepository;
+import com.commute.api.domain.station.repository.RailLineRepository;
 import com.commute.api.domain.station.repository.StationRepository;
 import com.commute.api.domain.station.service.HeartRailsApiClient;
 import com.commute.api.domain.station.service.StationMigrationService;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -43,14 +46,14 @@ public class OpenAPIController {
     /**
      * 路線リポジトリ / Line repository
      */
-    private final LineRepository lineRepository;
+    private final RailLineRepository railLineRepository;
 
     /**
      * 駅リポジトリ / Station repository
      */
     private final StationRepository stationRepository;
-
     private final StationMigrationService stationMigrationService;
+    private final JapaneseConverter japaneseConverter;
 
     /**
      * 全国の都道府県一覧をHeartRailsから取得し、DBへ一括登録する。
@@ -59,14 +62,18 @@ public class OpenAPIController {
     @GetMapping("/prefecture/all")
     public void getPrefectures() {
         long startTime = System.currentTimeMillis();
+
         log.info("[API_REQ] Fetching all prefectures from HeartRails external API.");
         try {
             List<String> prefectureList = heartRailsApiClient.getPrefectures();
 
             List<Prefecture> prefectures = prefectureList.stream().map(s ->
                     {
+                        String katakana = japaneseConverter.convertKanjiToKatakana(s);
                         Prefecture pref = new Prefecture();
-                        pref.setPrefName(s);
+                        pref.setPrefectureName(s);
+                        pref.setNameKana(katakana);
+                        pref.setNameEn(japaneseConverter.convertKatakanaToEn(katakana));
                         return pref;
                     })
                     .toList();
@@ -75,7 +82,7 @@ public class OpenAPIController {
             long elapsedTime = System.currentTimeMillis() - startTime;
             //
             log.info("[API_RES] Successfully saved {} prefectures. Elapsed Time: {}ms", prefectures.size(), elapsedTime);
-        } catch(Exception e) {
+        } catch (Exception e) {
             //
             log.error("[API_ERR] Failed to fetch and save prefectures: {}", e.getMessage(), e);
             throw e; //
@@ -94,17 +101,22 @@ public class OpenAPIController {
         List<Prefecture> prefList = prefectureRepository.findAll();
         log.info("Found {} prefectures in DB. Fetching corresponding lines...", prefList.size());
         try {
-            List<Line> lines = prefList.stream()
-                    .flatMap(pref -> heartRailsApiClient.getLines(pref.getPrefName()).stream())
+            List<RailLine> lines = prefList.stream()
+                    .flatMap(pref -> heartRailsApiClient.getLines(pref.getPrefectureName()).stream())
                     .distinct()
                     .map(lineName -> {
-                        Line newLine = new Line();
+
+                        String katakana = japaneseConverter.convertKanjiToKatakana(lineName);
+
+                        RailLine newLine = new RailLine();
                         newLine.setLineName(lineName);
+                        newLine.setNameKana(katakana);
+                        newLine.setNameEn(japaneseConverter.convertKatakanaToEn(katakana));
                         return newLine;
                     })
                     .toList();
 
-            lineRepository.saveAll(lines);
+            railLineRepository.saveAll(lines);
             long elapsedTime = System.currentTimeMillis() - startTime;
 
             log.info("[API_RES] Successfully saved {} unique lines. Elapsed Time: {}ms", lines.size(), elapsedTime);
@@ -113,11 +125,10 @@ public class OpenAPIController {
             log.error("[API_ERR] Failed to fetch and save lines: {}", e.getMessage(), e);
             throw e; //
         }
-
     }
 
     /**
-     * DB上の全路線について駅一覧を取得し、DBへ一括登録する。
+     * DB上の全路線について駅一覧を取得し、DBへ一括登録する。 Station linetoStation
      * For every line in the DB, fetches the station list and bulk-saves it to the DB.
      *
      * <p>現在はコメントアウト中。 / Currently commented out.</p>

@@ -6,7 +6,7 @@ plugins {
 
 group = 'com.commute'
 version = '0.0.1-SNAPSHOT'
-description = 'commute-yaching-api'
+description = 'commute-rent-api'
 
 java {
     toolchain {
@@ -20,8 +20,11 @@ repositories {
 
 dependencies {
     implementation 'io.github.cdimascio:dotenv-java:3.0.0'
-    implementation 'io.jsonwebtoken:jjwt:0.12.6';
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1';
+    implementation 'io.jsonwebtoken:jjwt:0.12.6'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
+    // Source: https://mvnrepository.com/artifact/com.atilika.kuromoji/kuromoji-ipadic
+    implementation 'com.atilika.kuromoji:kuromoji-ipadic:0.9.0'
+    implementation 'com.ibm.icu:icu4j:73.2'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'

@@ -16,7 +16,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @since 2026/09/27
  */
 @SpringBootApplication
-public class CommuteYachingApiApplication {
+public class CommuteRentApiApplication {
 
     /**
      * アプリケーションのメインメソッド。
@@ -25,7 +25,7 @@ public class CommuteYachingApiApplication {
      * @param args コマンドライン引数 / Command-line arguments
      */
     public static void main(String[] args) {
-        SpringApplication.run(CommuteYachingApiApplication.class, args);
+        SpringApplication.run(CommuteRentApiApplication.class, args);
     }
 
 }

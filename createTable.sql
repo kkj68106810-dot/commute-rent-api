@@ -1,94 +1,115 @@
--- 1. 기존 테이블 삭제 (의존성 역순)
-DROP TABLE IF EXISTS user_book;
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS yaching_stats;
-DROP TABLE IF EXISTS line_stations;
-DROP TABLE IF EXISTS stations;
-DROP TABLE IF EXISTS line;
-DROP TABLE IF EXISTS prefectures;
+-- =====================================================================
+-- CS-DB-001  テーブル定義書  DDL  v1.0  (2026-10-10)
+-- 東京 家賃・通勤シミュレーター (Commute Simulator Tokyo)
+-- DBMS: MariaDB 12.3.2 / InnoDB / utf8mb4 (utf8mb4_uca1400_ai_ci)
+-- 作成者: Kim GwangJin
+-- 根拠: DB設計書 最終版（テーブル定義・物理モデル）。DB名 commute_sim と FK削除規則は前提
+-- =====================================================================
 
--- 2. 테이블 생성
+CREATE DATABASE IF NOT EXISTS commute_rent
+    DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
+USE commute_rent;
 
--- [1] 都道府県 (prefectures)
-CREATE TABLE prefectures
-(
-    prefecture_id BIGINT AUTO_INCREMENT NOT NULL COMMENT '自治体ID',
-    pref_name     VARCHAR(50) NOT NULL COMMENT '都道府県名',
-    PRIMARY KEY (prefecture_id)
-) COMMENT='都道府県';
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS favorite_stations, users, commute_times, rent_stats, line_stations, rail_lines, stations, prefectures;
+SET FOREIGN_KEY_CHECKS = 1;
 
+-- prefectures : 都道府県
+CREATE TABLE prefectures (
+                             prefecture_id      BIGINT         NOT NULL AUTO_INCREMENT COMMENT '都道府県ID',
+                             prefecture_name    VARCHAR(20)    NOT NULL COMMENT '都道府県名',
+                             name_kana          VARCHAR(100)    NULL COMMENT '都道府県名（カタカナ）',
+                             name_en            VARCHAR(100)    NULL COMMENT '都道府県名（ローマ字）',
+                             CONSTRAINT pk_prefectures PRIMARY KEY (prefecture_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='都道府県';
 
--- [2] 路線 (lines)
-CREATE TABLE line
-(
-    line_id   BIGINT AUTO_INCREMENT NOT NULL COMMENT '路線ID',
-    line_name VARCHAR(100) NOT NULL COMMENT '路線名',
-    PRIMARY KEY (line_id)
-) COMMENT='路線';
+-- stations : 駅
+CREATE TABLE stations (
+                          station_id         BIGINT         NOT NULL AUTO_INCREMENT COMMENT '駅ID',
+                          prefecture_id      BIGINT         NOT NULL COMMENT '都道府県ID',
+                          station_name       VARCHAR(20)    NOT NULL COMMENT '駅名',
+                          name_kana          VARCHAR(100)    NULL COMMENT '駅名（カタカナ）',
+                          name_en            VARCHAR(100)    NULL COMMENT '駅名（ローマ字）',
+                          latitude           DECIMAL(10,8)  NOT NULL COMMENT '緯度（y）',
+                          longitude          DECIMAL(11,8)  NOT NULL COMMENT '経度（x）',
+                          CONSTRAINT pk_stations PRIMARY KEY (station_id),
+                          KEY idx_stations_lat_lng (latitude, longitude),
+                          KEY idx_stations_prefecture (prefecture_id),
+                          CONSTRAINT fk_stations_prefecture FOREIGN KEY (prefecture_id) REFERENCES prefectures(prefecture_id) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='駅';
 
+-- rail_lines : 路線
+CREATE TABLE rail_lines (
+                            line_id            BIGINT         NOT NULL AUTO_INCREMENT COMMENT '路線ID',
+                            line_name          VARCHAR(20)    NOT NULL COMMENT '路線名',
+                            name_kana          VARCHAR(100)    NULL COMMENT '路線名（カタカナ）',
+                            name_en            VARCHAR(100)    NULL COMMENT '路線名（ローマ字）',
+                            CONSTRAINT pk_rail_lines PRIMARY KEY (line_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='路線';
 
--- [3] 駅 (stations)
-CREATE TABLE stations
-(
-    station_id    BIGINT AUTO_INCREMENT NOT NULL COMMENT '駅ID',
-    prefecture_id BIGINT       NOT NULL COMMENT '自治体ID',
-    station_name      VARCHAR(100) NOT NULL COMMENT '駅名',
-    latitude DOUBLE NOT NULL COMMENT '緯度 (y)',
-    longitude DOUBLE NOT NULL COMMENT '経度 (x)',
-    PRIMARY KEY (station_id),
-    CONSTRAINT fk_stations_prefectures FOREIGN KEY (prefecture_id) REFERENCES prefectures (prefecture_id)
-) COMMENT='駅';
+-- line_stations : 路線_駅マッピング
+CREATE TABLE line_stations (
+                               line_station_id    BIGINT         NOT NULL AUTO_INCREMENT COMMENT '路線_駅ID',
+                               line_id            BIGINT         NOT NULL COMMENT '路線ID',
+                               station_id         BIGINT         NOT NULL COMMENT '駅ID',
+                               `sequence`         INT            NOT NULL COMMENT '並び順',
+                               CONSTRAINT pk_line_stations PRIMARY KEY (line_station_id),
+                               KEY idx_ls_line_station (line_id, station_id),
+                               KEY idx_ls_station (station_id),
+                               CONSTRAINT fk_ls_line FOREIGN KEY (line_id) REFERENCES rail_lines(line_id) ON DELETE CASCADE ON UPDATE CASCADE,
+                               CONSTRAINT fk_ls_station FOREIGN KEY (station_id) REFERENCES stations(station_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='路線_駅マッピング';
 
+-- rent_stats : 駅別家賃
+CREATE TABLE rent_stats (
+                            rent_stat_id       BIGINT         NOT NULL AUTO_INCREMENT COMMENT '統計ID',
+                            station_id         BIGINT         NOT NULL COMMENT '駅ID',
+                            room_layout        VARCHAR(10)    NOT NULL COMMENT '間取り',
+                            average_rent       INT            NOT NULL COMMENT '平均家賃',
+                            min_rent           INT            NULL COMMENT '最小家賃',
+                            max_rent           INT            NULL COMMENT '最大家賃',
+                            updated_at         TIMESTAMP      NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新日時',
+                            CONSTRAINT pk_rent_stats PRIMARY KEY (rent_stat_id),
+                            CONSTRAINT uq_rent_station_layout UNIQUE (station_id, room_layout),
+                            KEY idx_rent_layout_avg (room_layout, average_rent),
+                            CONSTRAINT chk_rent_range CHECK (min_rent <= average_rent AND average_rent <= max_rent),
+                            CONSTRAINT fk_rent_station FOREIGN KEY (station_id) REFERENCES stations(station_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='駅別家賃';
 
--- [4] 路線_駅マッピング (line_stations)
-CREATE TABLE line_stations
-(
-    line_station_id BIGINT AUTO_INCREMENT NOT NULL COMMENT '路線_駅ID',
-    line_id         BIGINT NOT NULL COMMENT '路線ID',
-    station_id      BIGINT NOT NULL COMMENT '駅ID',
-    sequence        INT    NOT NULL COMMENT '並び順',
-    PRIMARY KEY (line_station_id),
-    CONSTRAINT fk_line_stations_lines FOREIGN KEY (line_id) REFERENCES line (line_id),
-    CONSTRAINT fk_line_stations_stations FOREIGN KEY (station_id) REFERENCES stations (station_id)
-) COMMENT='路線_駅マッピング';
+-- commute_times : 通勤時間
+CREATE TABLE commute_times (
+                               dest_station_id    BIGINT         NOT NULL COMMENT '到着駅ID（勤務地）',
+                               origin_station_id  BIGINT         NOT NULL COMMENT '出発駅ID',
+                               minutes            SMALLINT       NOT NULL COMMENT '所要時間（分）',
+                               transfers          TINYINT        NOT NULL COMMENT '乗換回数',
+                               CONSTRAINT pk_commute_times PRIMARY KEY (dest_station_id, origin_station_id),
+                               KEY idx_commute_dest_min (dest_station_id, minutes),
+                               KEY idx_commute_origin (origin_station_id),
+                               CONSTRAINT fk_commute_dest FOREIGN KEY (dest_station_id) REFERENCES stations(station_id) ON DELETE CASCADE ON UPDATE CASCADE,
+                               CONSTRAINT fk_commute_origin FOREIGN KEY (origin_station_id) REFERENCES stations(station_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='通勤時間';
 
--- [5] 駅別家賃 (yaching_stats)
-CREATE TABLE yaching_stats
-(
-    ya_id           BIGINT AUTO_INCREMENT NOT NULL COMMENT '統計ID',
-    line_station_id BIGINT      NOT NULL COMMENT '路線駅ID (line_stations.line_station_id)',
-    room_layout     VARCHAR(10) NOT NULL COMMENT '間取り',
-    average_yaching INT         NOT NULL COMMENT '平均家賃',
-    min_yaching     INT                  DEFAULT NULL COMMENT '最小家賃',
-    max_yaching     INT                  DEFAULT NULL COMMENT '最大家賃',
-    updated_at      TIMESTAMP            DEFAULT CURRENT_TIMESTAMP COMMENT '更新日時',
-    PRIMARY KEY (ya_id),
-    CONSTRAINT fk_yaching_stats_line_stations FOREIGN KEY (line_station_id) REFERENCES line_stations (line_station_id)
-) COMMENT='駅別家賃';
+-- users : 会員
+CREATE TABLE users (
+                       user_id            BIGINT         NOT NULL AUTO_INCREMENT COMMENT '会員ID',
+                       email              VARCHAR(100)   NOT NULL COMMENT 'メールアドレス',
+                       password_hash      VARCHAR(255)   NOT NULL COMMENT 'パスワード',
+                       role               VARCHAR(20)    NOT NULL DEFAULT 'USER' COMMENT '権限',
+                       created_at         TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登録日時',
+                       CONSTRAINT pk_users PRIMARY KEY (user_id),
+                       CONSTRAINT uq_users_email UNIQUE (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='会員';
 
--- yaching_stats 테이블의 복합 인덱스 (room_layout, average_yaching)
-CREATE INDEX idx_yaching_stats_room_avg ON yaching_stats (room_layout, average_yaching);
+-- favorite_stations : お気に入り駅
+CREATE TABLE favorite_stations (
+                                   favorite_id        BIGINT         NOT NULL AUTO_INCREMENT COMMENT 'お気に入りID',
+                                   user_id            BIGINT         NOT NULL COMMENT '会員ID',
+                                   station_id         BIGINT         NOT NULL COMMENT '駅ID',
+                                   created_at         TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登録日時',
+                                   CONSTRAINT pk_favorite_stations PRIMARY KEY (favorite_id),
+                                   CONSTRAINT uq_fav_user_station UNIQUE (user_id, station_id),
+                                   KEY idx_fav_station (station_id),
+                                   CONSTRAINT fk_fav_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
+                                   CONSTRAINT fk_fav_station FOREIGN KEY (station_id) REFERENCES stations(station_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='お気に入り駅';
 
--- [6] 会員 (users)
-CREATE TABLE users
-(
-    user_id       BIGINT AUTO_INCREMENT NOT NULL COMMENT '会員ID',
-    email         VARCHAR(100) NOT NULL COMMENT 'メールアドレス',
-    password_hash VARCHAR(255) NOT NULL COMMENT 'パスワード (BCrypt暗号化)',
-    role          VARCHAR(20)  NOT NULL DEFAULT 'USER' COMMENT '権限',
-    created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登録日時',
-    PRIMARY KEY (user_id),
-    UNIQUE KEY uk_users_email (email)
-) COMMENT='会員';
-
--- [7] お気に入り駅 (user_book)
-CREATE TABLE user_book
-(
-    book_id    BIGINT AUTO_INCREMENT NOT NULL COMMENT 'ブックマークID',
-    user_id    BIGINT    NOT NULL COMMENT '会員ID',
-    line_station_id BIGINT    NOT NULL COMMENT '統計ID',
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登録日時',
-    PRIMARY KEY (book_id),
-    CONSTRAINT fk_user_book_users FOREIGN KEY (user_id) REFERENCES users (user_id),
-    CONSTRAINT fk_user_book_yaching_stats FOREIGN KEY (line_station_id) REFERENCES yaching_stats (ya_id)
-) COMMENT='お気に入り駅';

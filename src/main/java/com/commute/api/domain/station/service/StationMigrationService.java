@@ -1,13 +1,14 @@
 package com.commute.api.domain.station.service;
 
+import com.commute.api.common.utils.JapaneseConverter;
 import com.commute.api.domain.station.dto.HeartRailsStationDto;
-import com.commute.api.domain.station.entity.Line;
 import com.commute.api.domain.station.entity.LineStation;
 import com.commute.api.domain.station.entity.Prefecture;
+import com.commute.api.domain.station.entity.RailLine;
 import com.commute.api.domain.station.entity.Station;
-import com.commute.api.domain.station.repository.LineRepository;
 import com.commute.api.domain.station.repository.LineStationRepository;
 import com.commute.api.domain.station.repository.PrefectureRepository;
+import com.commute.api.domain.station.repository.RailLineRepository;
 import com.commute.api.domain.station.repository.StationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,10 +35,12 @@ public class StationMigrationService {
 
     /** フィールド説明 / Field description */
     private final HeartRailsApiClient apiClient;
-    private final LineRepository lineRepository;
+    private final RailLineRepository railLineRepository;
     private final StationRepository stationRepository;
     private final PrefectureRepository prefectureRepository;
     private final LineStationRepository lineStationRepository;
+    private final JapaneseConverter japaneseConverter;
+
 
     /**
      * 処理内容を記入する。
@@ -49,19 +52,19 @@ public class StationMigrationService {
         long startTime = System.currentTimeMillis();
 
         try {
-            List<Line> lineList = lineRepository.findAll();
+            List<RailLine> lineList = railLineRepository.findAll();
             if (lineList.isEmpty()) {
                 log.warn("[MIGRATION_WARN] No lines found in DB. Migration aborted.");
                 return;
             }
 
-            Map<String, Line> lineMap = lineList.stream()
-                    .collect(Collectors.toMap(Line::getLineName, line -> line));
+            Map<String, RailLine> lineMap = lineList.stream()
+                    .collect(Collectors.toMap(RailLine::getLineName, line -> line));
 
             List<HeartRailsStationDto.StationInfo> stationList = new ArrayList<>();
 
             // 1단계: 외부 API 호출 구간 (네트워크 에러 가능성 존재)
-            for (Line line : lineList) {
+            for (RailLine line : lineList) {
                 try {
                     List<HeartRailsStationDto.StationInfo> stations = apiClient.getStations(line.getLineName());
                     stationList.addAll(stations);
@@ -78,16 +81,19 @@ public class StationMigrationService {
             // 2단계: 데이터 가공 및 저장 구간
             for (Map.Entry<String, List<HeartRailsStationDto.StationInfo>> entry : groupedStation.entrySet()) {
                 String stationName = entry.getKey();
+                String katakana = japaneseConverter.convertKanjiToKatakana(stationName);
                 List<HeartRailsStationDto.StationInfo> linesForStation = entry.getValue();
 
                 HeartRailsStationDto.StationInfo firstLine = linesForStation.get(0);
 
                 Station station = new Station();
-                station.setStaName(stationName);
+                station.setStationName(stationName);
+                station.setNameKana(katakana);
+                station.setNameEn(japaneseConverter.convertKatakanaToEn(katakana));
                 station.setLatitude(firstLine.y());
                 station.setLongitude(firstLine.x());
 
-                Prefecture prefecture = prefectureRepository.findByPrefName(firstLine.prefecture());
+                Prefecture prefecture = prefectureRepository.findByPrefectureName(firstLine.prefecture());
                 if (prefecture == null) {
                     log.warn("[MIGRATION_WARN] Prefecture not found in DB: {}. Station: {}", firstLine.prefecture(), stationName);
                 }
@@ -97,7 +103,7 @@ public class StationMigrationService {
 
                 List<LineStation> mapping = linesForStation.stream()
                         .map(info -> {
-                            Line matchedLine = lineMap.get(info.line());
+                            RailLine matchedLine = lineMap.get(info.line());
                             LineStation lineStation = new LineStation();
                             lineStation.setLine(matchedLine);
                             lineStation.setStation(savedStation);

@@ -19,5 +19,5 @@ public interface PrefectureRepository extends JpaRepository<Prefecture, Long> {
      * @param name 説明 / Description
      * @return 戻り値の説明 / Return value description
      */
-    Prefecture findByPrefName(String prefecture);
+    Prefecture findByPrefectureName(String prefecture);
 }
