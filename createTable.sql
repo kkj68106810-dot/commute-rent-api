@@ -16,8 +16,8 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 -- prefectures : 都道府県
 CREATE TABLE prefectures (
-                             prefecture_id      BIGINT         NOT NULL AUTO_INCREMENT COMMENT '都道府県ID',
-                             prefecture_name    VARCHAR(20)    NOT NULL COMMENT '都道府県名',
+                             prefecture_id      BIGINT          NOT NULL AUTO_INCREMENT COMMENT '都道府県ID',
+                             prefecture_name    VARCHAR(20)     NOT NULL COMMENT '都道府県名',
                              name_kana          VARCHAR(100)    NULL COMMENT '都道府県名（カタカナ）',
                              name_en            VARCHAR(100)    NULL COMMENT '都道府県名（ローマ字）',
                              CONSTRAINT pk_prefectures PRIMARY KEY (prefecture_id)
@@ -25,13 +25,14 @@ CREATE TABLE prefectures (
 
 -- stations : 駅
 CREATE TABLE stations (
-                          station_id         BIGINT         NOT NULL AUTO_INCREMENT COMMENT '駅ID',
-                          prefecture_id      BIGINT         NOT NULL COMMENT '都道府県ID',
-                          station_name       VARCHAR(20)    NOT NULL COMMENT '駅名',
-                          name_kana          VARCHAR(100)    NULL COMMENT '駅名（カタカナ）',
-                          name_en            VARCHAR(100)    NULL COMMENT '駅名（ローマ字）',
-                          latitude           DECIMAL(10,8)  NOT NULL COMMENT '緯度（y）',
-                          longitude          DECIMAL(11,8)  NOT NULL COMMENT '経度（x）',
+                          station_id         BIGINT                     NOT NULL AUTO_INCREMENT COMMENT '駅ID',
+                          prefecture_id      BIGINT                     NOT NULL COMMENT '都道府県ID',
+                          station_name       VARCHAR(50)                NOT NULL COMMENT '駅名',
+                          name_kana          VARCHAR(100)               NULL COMMENT '駅名（カタカナ）',
+                          name_en            VARCHAR(100)               NULL COMMENT '駅名（ローマ字）',
+                          latitude           DECIMAL(10,8)              NOT NULL COMMENT '緯度（y）',
+                          longitude          DECIMAL(11,8)              NOT NULL COMMENT '経度（x）',
+                          is_major_workplace    BOOLEAN  DEFAULT FALSE  NOT NULL COMMENT '主要勤務地フラグ',
                           CONSTRAINT pk_stations PRIMARY KEY (station_id),
                           KEY idx_stations_lat_lng (latitude, longitude),
                           KEY idx_stations_prefecture (prefecture_id),
@@ -58,7 +59,7 @@ CREATE TABLE line_stations (
                                KEY idx_ls_station (station_id),
                                CONSTRAINT fk_ls_line FOREIGN KEY (line_id) REFERENCES rail_lines(line_id) ON DELETE CASCADE ON UPDATE CASCADE,
                                CONSTRAINT fk_ls_station FOREIGN KEY (station_id) REFERENCES stations(station_id) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='路線_駅マッピング';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='路線_駅';
 
 -- rent_stats : 駅別家賃
 CREATE TABLE rent_stats (
@@ -78,12 +79,12 @@ CREATE TABLE rent_stats (
 
 -- commute_times : 通勤時間
 CREATE TABLE commute_times (
-                               dest_station_id    BIGINT         NOT NULL COMMENT '到着駅ID（勤務地）',
-                               origin_station_id  BIGINT         NOT NULL COMMENT '出発駅ID',
-                               minutes            SMALLINT       NOT NULL COMMENT '所要時間（分）',
-                               transfers          TINYINT        NOT NULL COMMENT '乗換回数',
+                               dest_station_id    BIGINT                    NOT NULL COMMENT '到着駅ID（勤務地）',
+                               origin_station_id  BIGINT                    NOT NULL COMMENT '出発駅ID',
+                               minutes            SMALLINT       UNSIGNED   NOT NULL COMMENT '所要時間（分）',
+                               transfers          TINYINT        UNSIGNED   NOT NULL COMMENT '乗換回数',
                                CONSTRAINT pk_commute_times PRIMARY KEY (dest_station_id, origin_station_id),
-                               KEY idx_commute_dest_min (dest_station_id, minutes),
+                               KEY idx_commute_dest_min (dest_station_id, minutes, transfers),
                                KEY idx_commute_origin (origin_station_id),
                                CONSTRAINT fk_commute_dest FOREIGN KEY (dest_station_id) REFERENCES stations(station_id) ON DELETE CASCADE ON UPDATE CASCADE,
                                CONSTRAINT fk_commute_origin FOREIGN KEY (origin_station_id) REFERENCES stations(station_id) ON DELETE CASCADE ON UPDATE CASCADE

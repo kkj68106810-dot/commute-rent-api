@@ -14,6 +14,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.math.BigDecimal;
 
@@ -57,5 +58,9 @@ public class Station {
     @Column(name = "longitude", nullable = false, precision = 11, scale = 8)
     private BigDecimal longitude;
 
+    @NotNull
+    @Column(name = "is_major_workspace", nullable = false)
+    @ColumnDefault("false")
+    private boolean isMajorWorkspace;
 
 }
