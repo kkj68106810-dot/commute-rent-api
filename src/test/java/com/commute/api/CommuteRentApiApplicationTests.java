@@ -11,7 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  * @since 2026/09/27
  */
 @SpringBootTest
-class CommuteYachingApiApplicationTests {
+class CommuteRentApiApplicationTests {
 
 	/**
 	 * Springアプリケーションコンテキストが正常に起動することを検証する。
