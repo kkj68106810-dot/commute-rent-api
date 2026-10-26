@@ -59,8 +59,8 @@ public class Station {
     private BigDecimal longitude;
 
     @NotNull
-    @Column(name = "is_major_workspace", nullable = false)
-    @ColumnDefault("false")
-    private boolean isMajorWorkspace;
+    @ColumnDefault("0")
+    @Column(name = "is_major_workplace", nullable = false)
+    private Boolean isMajorWorkplace;
 
 }

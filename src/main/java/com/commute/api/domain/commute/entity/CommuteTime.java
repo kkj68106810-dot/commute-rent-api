@@ -16,6 +16,13 @@ import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
+/**
+ * クラスの説明を記入する。
+ * Write the class description.
+ *
+ * @author Kim Gwangjin
+ * @since 2026/10/20
+ */
 @Getter
 @Setter
 @Entity
@@ -47,6 +54,5 @@ public class CommuteTime {
     @NotNull
     @Column(name = "transfers", nullable = false)
     private Byte transfers;
-
 
 }

@@ -16,7 +16,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -134,7 +137,7 @@ public class OpenAPIController {
      * <p>現在はコメントアウト中。 / Currently commented out.</p>
      */
     @GetMapping("/line/station/all")
-    public void getLineToStations() {
+    public void getLineToStations() throws ParseException {
         long startTime = System.currentTimeMillis();
         log.info("[API_REQ] Starting line-to-station migration service.");
 

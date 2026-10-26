@@ -10,11 +10,19 @@ import lombok.Setter;
 import java.io.Serial;
 import java.io.Serializable;
 
+/**
+ * クラスの説明を記入する。
+ * Write the class description.
+ *
+ * @author Kim Gwangjin
+ * @since 2026/10/20
+ */
 @Getter
 @Setter
 @EqualsAndHashCode
 @Embeddable
 public class CommuteTimeId implements Serializable {
+
     @Serial
     private static final long serialVersionUID = 2197315152451507889L;
     @NotNull

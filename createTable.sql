@@ -50,10 +50,10 @@ CREATE TABLE rail_lines (
 
 -- line_stations : 路線_駅マッピング
 CREATE TABLE line_stations (
-                               line_station_id    BIGINT         NOT NULL AUTO_INCREMENT COMMENT '路線_駅ID',
-                               line_id            BIGINT         NOT NULL COMMENT '路線ID',
-                               station_id         BIGINT         NOT NULL COMMENT '駅ID',
-                               `sequence`         INT            NOT NULL COMMENT '並び順',
+                               line_station_id    BIGINT    UNIQUE  NOT NULL AUTO_INCREMENT COMMENT '路線_駅ID',
+                               line_id            BIGINT            NOT NULL COMMENT '路線ID',
+                               station_id         BIGINT            NOT NULL COMMENT '駅ID',
+                               `sequence`         INT               NOT NULL COMMENT '並び順',
                                CONSTRAINT pk_line_stations PRIMARY KEY (line_station_id),
                                KEY idx_ls_line_station (line_id, station_id),
                                KEY idx_ls_station (station_id),
