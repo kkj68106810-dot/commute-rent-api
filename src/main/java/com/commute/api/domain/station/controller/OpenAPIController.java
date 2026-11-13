@@ -3,7 +3,6 @@ package com.commute.api.domain.station.controller;
 import com.commute.api.common.utils.JapaneseConverter;
 import com.commute.api.domain.station.entity.Prefecture;
 import com.commute.api.domain.station.entity.RailLine;
-import com.commute.api.domain.station.entity.Station;
 import com.commute.api.domain.station.repository.PrefectureRepository;
 import com.commute.api.domain.station.repository.RailLineRepository;
 import com.commute.api.domain.station.repository.StationRepository;
@@ -17,9 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 /**

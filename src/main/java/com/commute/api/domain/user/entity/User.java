@@ -5,7 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
@@ -15,8 +14,6 @@ import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
 
 import java.time.Instant;
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 @Getter
 @Setter
@@ -49,8 +46,16 @@ public class User {
     @ColumnDefault("current_timestamp()")
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
-    @OneToMany(mappedBy = "user")
-    private Set<FavoriteStation> favoriteStations = new LinkedHashSet<>();
+    @Size(max = 20)
+    @NotNull
+    @Column(name = "provider", nullable = false, length = 20)
+    private String provider;
+    @Size(max = 255)
+    @NotNull
+    @Column(name = "provider_id", nullable = false)
+    private String providerId;
+    @Column(name = "last_login_at")
+    private Instant lastLoginAt;
 
 
 }

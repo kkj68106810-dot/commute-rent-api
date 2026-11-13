@@ -21,17 +21,17 @@ public class RailLine {
     @Column(name = "line_id", nullable = false)
     private Long id;
 
-    @Size(max = 20)
+    @Size(max = 50)
     @NotNull
-    @Column(name = "line_name", nullable = false, length = 20)
+    @Column(name = "line_name", nullable = false, length = 50)
     private String lineName;
 
-    @Size(max = 100)
-    @Column(name = "name_kana", length = 50)
+    @Size(max = 200)
+    @Column(name = "name_kana", length = 200)
     private String nameKana;
 
-    @Size(max = 100)
-    @Column(name = "name_en", length = 50)
+    @Size(max = 200)
+    @Column(name = "name_en", length = 200)
     private String nameEn;
 
 

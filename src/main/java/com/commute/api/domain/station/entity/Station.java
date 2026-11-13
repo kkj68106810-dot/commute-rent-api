@@ -61,6 +61,7 @@ public class Station {
     @NotNull
     @ColumnDefault("0")
     @Column(name = "is_major_workplace", nullable = false)
-    private Boolean isMajorWorkplace;
+    private Boolean isMajorWorkplace = false;
+
 
 }

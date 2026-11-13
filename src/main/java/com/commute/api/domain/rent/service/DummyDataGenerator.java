@@ -2,9 +2,7 @@ package com.commute.api.domain.rent.service;
 
 import com.commute.api.domain.rent.entity.RentStat;
 import com.commute.api.domain.rent.repository.RentStatRepository;
-import com.commute.api.domain.station.entity.LineStation;
 import com.commute.api.domain.station.entity.Station;
-import com.commute.api.domain.station.repository.LineStationRepository;
 import com.commute.api.domain.station.repository.StationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +53,9 @@ public class DummyDataGenerator implements CommandLineRunner {
             log.info("야칭 통계 데이터가 이미 존재합니다. 더미 생성을 건너뜁니다.");
             return;
         }
+
+
+
 
         log.info("야칭 더미 데이터 생성을 시작합니다...");
         List<Station> stations = stationRepository.findAll();

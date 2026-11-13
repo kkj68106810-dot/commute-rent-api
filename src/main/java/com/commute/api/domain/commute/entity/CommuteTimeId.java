@@ -22,9 +22,8 @@ import java.io.Serializable;
 @EqualsAndHashCode
 @Embeddable
 public class CommuteTimeId implements Serializable {
-
     @Serial
-    private static final long serialVersionUID = 2197315152451507889L;
+    private static final long serialVersionUID = 1752064117910541544L;
     @NotNull
     @Column(name = "dest_station_id", nullable = false)
     private Long destStationId;

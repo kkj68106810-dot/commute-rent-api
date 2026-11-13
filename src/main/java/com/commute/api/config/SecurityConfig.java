@@ -44,7 +44,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/**").permitAll()
                         .anyRequest().authenticated()
-                );
+                ).oauth2Login(oauth2 -> oauth2
+                        .defaultSuccessUrl("/", true))
+        ;
 
         return http.build();
     }

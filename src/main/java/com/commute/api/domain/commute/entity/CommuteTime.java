@@ -55,4 +55,5 @@ public class CommuteTime {
     @Column(name = "transfers", nullable = false)
     private Byte transfers;
 
+
 }

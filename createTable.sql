@@ -4,6 +4,9 @@
 -- DBMS: MariaDB 12.3.2 / InnoDB / utf8mb4 (utf8mb4_uca1400_ai_ci)
 -- 作成者: Kim GwangJin
 -- 根拠: DB設計書 最終版（テーブル定義・物理モデル）。DB名 commute_sim と FK削除規則は前提
+-- v1.2 (2026-10-16): commute_times の CHECK (origin_station_id <> dest_station_id) を削除（ISS-11 決定、アプリ側で検証）
+-- v1.3 (2026-10-18): stations.station_name を VARCHAR(20) → VARCHAR(50) に拡張（ISS-12 駅名の長さ決定、エンティティ Station length = 50 と一致）
+-- v1.4 (2026-10-22): users に provider / provider_id / last_login_at と UNIQUE(provider, provider_id) を追加、email を VARCHAR(255) に拡張、password_hash を NULL 許可に変更（ISS-13 Google ログイン）
 -- =====================================================================
 
 CREATE DATABASE IF NOT EXISTS commute_rent
@@ -16,8 +19,8 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 -- prefectures : 都道府県
 CREATE TABLE prefectures (
-                             prefecture_id      BIGINT          NOT NULL AUTO_INCREMENT COMMENT '都道府県ID',
-                             prefecture_name    VARCHAR(20)     NOT NULL COMMENT '都道府県名',
+                             prefecture_id      BIGINT         NOT NULL AUTO_INCREMENT COMMENT '都道府県ID',
+                             prefecture_name    VARCHAR(20)    NOT NULL COMMENT '都道府県名',
                              name_kana          VARCHAR(100)    NULL COMMENT '都道府県名（カタカナ）',
                              name_en            VARCHAR(100)    NULL COMMENT '都道府県名（ローマ字）',
                              CONSTRAINT pk_prefectures PRIMARY KEY (prefecture_id)
@@ -25,14 +28,14 @@ CREATE TABLE prefectures (
 
 -- stations : 駅
 CREATE TABLE stations (
-                          station_id         BIGINT                     NOT NULL AUTO_INCREMENT COMMENT '駅ID',
-                          prefecture_id      BIGINT                     NOT NULL COMMENT '都道府県ID',
-                          station_name       VARCHAR(50)                NOT NULL COMMENT '駅名',
-                          name_kana          VARCHAR(100)               NULL COMMENT '駅名（カタカナ）',
-                          name_en            VARCHAR(100)               NULL COMMENT '駅名（ローマ字）',
-                          latitude           DECIMAL(10,8)              NOT NULL COMMENT '緯度（y）',
-                          longitude          DECIMAL(11,8)              NOT NULL COMMENT '経度（x）',
-                          is_major_workplace    BOOLEAN  DEFAULT FALSE  NOT NULL COMMENT '主要勤務地フラグ',
+                          station_id         BIGINT         NOT NULL AUTO_INCREMENT COMMENT '駅ID',
+                          prefecture_id      BIGINT         NOT NULL COMMENT '都道府県ID',
+                          station_name       VARCHAR(50)    NOT NULL COMMENT '駅名',
+                          name_kana          VARCHAR(100)    NULL COMMENT '駅名（カタカナ）',
+                          name_en            VARCHAR(100)    NULL COMMENT '駅名（ローマ字）',
+                          latitude           DECIMAL(10,8)  NOT NULL COMMENT '緯度（y）',
+                          longitude          DECIMAL(11,8)  NOT NULL COMMENT '経度（x）',
+                          is_major_workplace BOOLEAN NOT NULL DEFAULT FALSE,
                           CONSTRAINT pk_stations PRIMARY KEY (station_id),
                           KEY idx_stations_lat_lng (latitude, longitude),
                           KEY idx_stations_prefecture (prefecture_id),
@@ -50,16 +53,16 @@ CREATE TABLE rail_lines (
 
 -- line_stations : 路線_駅マッピング
 CREATE TABLE line_stations (
-                               line_station_id    BIGINT    UNIQUE  NOT NULL AUTO_INCREMENT COMMENT '路線_駅ID',
-                               line_id            BIGINT            NOT NULL COMMENT '路線ID',
-                               station_id         BIGINT            NOT NULL COMMENT '駅ID',
-                               `sequence`         INT               NOT NULL COMMENT '並び順',
+                               line_station_id    BIGINT         NOT NULL AUTO_INCREMENT COMMENT '路線_駅ID',
+                               line_id            BIGINT         NOT NULL COMMENT '路線ID',
+                               station_id         BIGINT         NOT NULL COMMENT '駅ID',
+                               `sequence`         INT            NOT NULL COMMENT '並び順',
                                CONSTRAINT pk_line_stations PRIMARY KEY (line_station_id),
                                KEY idx_ls_line_station (line_id, station_id),
                                KEY idx_ls_station (station_id),
                                CONSTRAINT fk_ls_line FOREIGN KEY (line_id) REFERENCES rail_lines(line_id) ON DELETE CASCADE ON UPDATE CASCADE,
                                CONSTRAINT fk_ls_station FOREIGN KEY (station_id) REFERENCES stations(station_id) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='路線_駅';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='路線_駅マッピング';
 
 -- rent_stats : 駅別家賃
 CREATE TABLE rent_stats (
@@ -78,11 +81,12 @@ CREATE TABLE rent_stats (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='駅別家賃';
 
 -- commute_times : 通勤時間
+-- origin_station_id <> dest_station_id はアプリ側（Service / バッチ）で検証する（ISS-11 決定 v1.2: DB CHECK は設けない）
 CREATE TABLE commute_times (
-                               dest_station_id    BIGINT                    NOT NULL COMMENT '到着駅ID（勤務地）',
-                               origin_station_id  BIGINT                    NOT NULL COMMENT '出発駅ID',
-                               minutes            SMALLINT       UNSIGNED   NOT NULL COMMENT '所要時間（分）',
-                               transfers          TINYINT        UNSIGNED   NOT NULL COMMENT '乗換回数',
+                               dest_station_id    BIGINT         NOT NULL COMMENT '到着駅ID（勤務地）',
+                               origin_station_id  BIGINT         NOT NULL COMMENT '出発駅ID',
+                               minutes            SMALLINT       UNSIGNED NOT NULL COMMENT '所要時間（分）' ,
+                               transfers          TINYINT        UNSIGNED NOT NULL COMMENT '乗換回数',
                                CONSTRAINT pk_commute_times PRIMARY KEY (dest_station_id, origin_station_id),
                                KEY idx_commute_dest_min (dest_station_id, minutes, transfers),
                                KEY idx_commute_origin (origin_station_id),
@@ -93,12 +97,16 @@ CREATE TABLE commute_times (
 -- users : 会員
 CREATE TABLE users (
                        user_id            BIGINT         NOT NULL AUTO_INCREMENT COMMENT '会員ID',
-                       email              VARCHAR(100)   NOT NULL COMMENT 'メールアドレス',
-                       password_hash      VARCHAR(255)   NOT NULL COMMENT 'パスワード',
+                       email              VARCHAR(255)   NOT NULL COMMENT 'メールアドレス（Google、email_verified = true のみ許可）',
+                       password_hash      VARCHAR(255)   NULL COMMENT 'パスワードハッシュ（v1.4 未使用: Google ログインのみ対応）',
+                       provider           VARCHAR(20)    NOT NULL COMMENT '認証プロバイダ（google）',
+                       provider_id        VARCHAR(255)   NOT NULL COMMENT 'プロバイダのユーザーID（OIDC sub）',
                        role               VARCHAR(20)    NOT NULL DEFAULT 'USER' COMMENT '権限',
                        created_at         TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登録日時',
+                       last_login_at      TIMESTAMP      NULL COMMENT '最終ログイン日時',
                        CONSTRAINT pk_users PRIMARY KEY (user_id),
-                       CONSTRAINT uq_users_email UNIQUE (email)
+                       CONSTRAINT uq_users_email UNIQUE (email),
+                       CONSTRAINT uq_users_provider UNIQUE (provider, provider_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='会員';
 
 -- favorite_stations : お気に入り駅

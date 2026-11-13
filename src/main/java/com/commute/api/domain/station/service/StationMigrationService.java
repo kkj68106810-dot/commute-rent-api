@@ -92,6 +92,7 @@ public class StationMigrationService {
                 station.setNameEn(japaneseConverter.convertKatakanaToEn(katakana));
                 station.setLatitude(firstLine.y());
                 station.setLongitude(firstLine.x());
+                station.setIsMajorWorkplace(false);
 
                 Prefecture prefecture = prefectureRepository.findByPrefectureName(firstLine.prefecture());
                 if (prefecture == null) {
@@ -122,3 +123,4 @@ public class StationMigrationService {
         }
     }
 }
+

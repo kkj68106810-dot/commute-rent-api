@@ -5,11 +5,15 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -21,18 +25,20 @@ public class Prefecture {
     @Column(name = "prefecture_id", nullable = false)
     private Long id;
 
-    @Size(max = 20)
+    @Size(max = 50)
     @NotNull
-    @Column(name = "prefecture_name", nullable = false, length = 20)
+    @Column(name = "prefecture_name", nullable = false, length = 50)
     private String prefectureName;
 
-    @Size(max = 100)
-    @Column(name = "name_kana", length = 50)
+    @Size(max = 200)
+    @Column(name = "name_kana", length = 200)
     private String nameKana;
 
-    @Size(max = 100)
-    @Column(name = "name_en", length = 50)
+    @Size(max = 200)
+    @Column(name = "name_en", length = 200)
     private String nameEn;
+    @OneToMany(mappedBy = "prefecture")
+    private Set<Station> stations = new LinkedHashSet<>();
 
 
 }
