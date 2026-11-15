@@ -7,6 +7,7 @@
 -- v1.2 (2026-10-16): commute_times の CHECK (origin_station_id <> dest_station_id) を削除（ISS-11 決定、アプリ側で検証）
 -- v1.3 (2026-10-18): stations.station_name を VARCHAR(20) → VARCHAR(50) に拡張（ISS-12 駅名の長さ決定、エンティティ Station length = 50 と一致）
 -- v1.4 (2026-10-22): users に provider / provider_id / last_login_at と UNIQUE(provider, provider_id) を追加、email を VARCHAR(255) に拡張、password_hash を NULL 許可に変更（ISS-13 Google ログイン）
+-- v1.5 (2026-11-15): email を user_email に改名（通常ログインのログインID、NOT NULL + UNIQUE、制約名 uq_users_email 維持）。user_id は内部PK、JWT subject は user_id。password_hash は NULL 許可を維持。provider は NOT NULL DEFAULT 'local'（通常アカウントの確定値）。provider_id は NULL 許可（通常アカウントは NULL、Google は OIDC sub）。UNIQUE(provider, provider_id) 維持。メール重複時は「すでに登録されているメールです」で拒否する方針を推奨（未確定）
 -- =====================================================================
 
 CREATE DATABASE IF NOT EXISTS commute_rent
@@ -96,16 +97,16 @@ CREATE TABLE commute_times (
 
 -- users : 会員
 CREATE TABLE users (
-                       user_id            BIGINT         NOT NULL AUTO_INCREMENT COMMENT '会員ID',
-                       email              VARCHAR(255)   NOT NULL COMMENT 'メールアドレス（Google、email_verified = true のみ許可）',
-                       password_hash      VARCHAR(255)   NULL COMMENT 'パスワードハッシュ（v1.4 未使用: Google ログインのみ対応）',
-                       provider           VARCHAR(20)    NOT NULL COMMENT '認証プロバイダ（google）',
-                       provider_id        VARCHAR(255)   NOT NULL COMMENT 'プロバイダのユーザーID（OIDC sub）',
+                       user_id            BIGINT         NOT NULL AUTO_INCREMENT COMMENT '会員ID（内部識別用PK、JWT subject）',
+                       user_email         VARCHAR(255)   NOT NULL COMMENT 'メールアドレス（通常ログインのログインID、UNIQUE）',
+                       password_hash      VARCHAR(255)   NULL COMMENT 'パスワードハッシュ（GoogleアカウントはパスワードなしのためNULL可）',
+                       provider           VARCHAR(20)    NOT NULL DEFAULT 'local' COMMENT '認証プロバイダ（通常アカウント既定値 local、Googleは google）',
+                       provider_id        VARCHAR(255)   NULL COMMENT 'プロバイダのユーザーID（GoogleはOIDC sub、通常アカウントはNULL）',
                        role               VARCHAR(20)    NOT NULL DEFAULT 'USER' COMMENT '権限',
                        created_at         TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登録日時',
                        last_login_at      TIMESTAMP      NULL COMMENT '最終ログイン日時',
                        CONSTRAINT pk_users PRIMARY KEY (user_id),
-                       CONSTRAINT uq_users_email UNIQUE (email),
+                       CONSTRAINT uq_users_email UNIQUE (user_email),
                        CONSTRAINT uq_users_provider UNIQUE (provider, provider_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci COMMENT='会員';
 

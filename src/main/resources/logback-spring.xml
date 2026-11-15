@@ -2,7 +2,7 @@
 <configuration>
     <!-- 로그 파일 저장 경로 변수 선언 -->
     <property name="LOG_PATH" value="C:/logs"/>
-    <property name="LOG_FILE_NAME" value="commute_yaching-api"/>
+    <property name="LOG_FILE_NAME" value="commute_rent-api"/>
 
     <!-- 1. 콘솔 Appender (개발용) -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -11,6 +11,9 @@
             <charset>UTF-8</charset>
         </encoder>
     </appender>
+    <logger name="org.springframework.security" level="trace" additivity="false">
+        <appender-ref ref="Console" />
+    </logger>
 
     <!-- 2. 파일 Appender (운영 필수: 로테이션 및 용량 관리) -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">

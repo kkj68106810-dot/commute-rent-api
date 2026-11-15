@@ -1,4 +1,4 @@
-package com.commute.api.config;
+package com.commute.api.common.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
